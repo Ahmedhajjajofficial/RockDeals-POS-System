@@ -1,12 +1,10 @@
-# تأكد إنك في جذر المستودع
+
 cd RockDeals-POS-System
 
-# إنشاء مجلد الـ workflows
-mkdir -p .github/workflows
+kdir -p .github/workflows
 
-# إنشاء ملفات الأكشن
 cat > .github/workflows/build.yml <<'EOF'
-name: 🧱 Build & Test
+name: Build & Test
 
 on:
   push:
@@ -101,7 +99,6 @@ jobs:
           echo "🎉 Deployment completed successfully!"
 EOF
 
-# إضافة الملفات ورفعها إلى GitHub
 git add .github/workflows
 git commit -m "Add full GitHub Actions pipeline (build, release, deploy mock)"
 git push origin main
