@@ -1,14 +1,14 @@
-name: AI Autonomous Developer (RockDeals POS)
+name: AI Autonomous Developer
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # للتشغيل اليدوي الشامل
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize]
 
 permissions:
-  contents: write  # السماح بالتعديل الفعلي على الملفات
+  contents: write
   pull-requests: write
   issues: write
 
@@ -26,27 +26,21 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          # نطلب من الذكاء الاصطناعي إنتاج سكربت Shell لتنفيذ التغييرات
           prompt: |
-            أنت مهندس برمجيات خبير ومدير تقني لمشروع "RockDeals-POS-System".
-            بناءً على ملف "architecture_rules.md" والمحتوى الحالي للمستودع:
-            1. ابحث عن الأخطاء البرمجية (Logic errors, Syntax) وأصلحها.
-            2. أعد تنظيم الملفات لتناسب هيكلية مشروع POS احترافي.
-            3. قم بتحديث التوثيق (README.md).
-            مهم جداً: قم بإخراج الإجابة كـ Shell Script كامل (bash) يقوم بعمليات (mkdir, mv, echo, cat) لتعديل الملفات.
-            اجعل الكود داخل علامات ```bash ... ``` فقط.
+            You are an expert software engineer for RockDeals-POS-System.
+            Based on architecture_rules.md and the current repository:
+            1. Fix logic and syntax errors.
+            2. Reorganize files for a professional POS structure.
+            3. Update README.md.
+            Output ONLY a full bash script (mkdir, mv, echo, cat) inside ```bash ... ``` blocks to apply changes.
 
       - name: Extract and Execute AI Script
         run: |
-          # استخراج السكربت من مخرجات Gemini وتشغيله
-          # نفترض أن المخرج تم حفظه في متغير الخطوة السابقة
           echo "${{ steps.gemini.outputs.response }}" | grep -Pzo '(?<=```bash\n)[\s\S]*?(?=\n```)' > apply_changes.sh
           if [ -s apply_changes.sh ]; then
             chmod +x apply_changes.sh
             ./apply_changes.sh
             rm apply_changes.sh
-          else
-            echo "No changes suggested by AI."
           fi
 
       - name: Commit and Push Changes
