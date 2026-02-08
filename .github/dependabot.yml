@@ -1,17 +1,39 @@
 https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-​version: 2
+version: 2
 updates:
-​Maintain dependencies for npm (Assuming RockDeals uses Node.js/React/Vue)
-​package-ecosystem: "npm"
-directory: "/"
-schedule:
-interval: "weekly"
-open-pull-requests-limit: 10
-labels:
-​"dependencies"
-​"security"
-​Maintain dependencies for GitHub Actions
-​package-ecosystem: "github-actions"
-directory: "/"
-schedule:
-interval: "monthly"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "major"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "python"
+      - "security"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
