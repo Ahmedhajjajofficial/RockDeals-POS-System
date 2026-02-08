@@ -3,17 +3,17 @@ name: AI Autonomous Developer (RockDeals POS)
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: # للتشغيل اليدوي الشامل
   pull_request:
     types: [opened, synchronize]
-  workflow_dispatch: # للتشغيل اليدوي لإعادة هيكلة المشروع
 
 permissions:
-  contents: write  # صلاحية تعديل الأكواد والملفات
+  contents: write  # السماح بالتعديل الفعلي على الملفات
   pull-requests: write
   issues: write
 
 jobs:
-  ai-fixer:
+  ai-developer:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -21,32 +21,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Gemini AI - Logic & Fixes
+      - name: Gemini AI - Generate Fixes & Restructure
         id: gemini
         uses: google-github-actions/run-gemini-cli@v0
         with:
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          # تم توسيع التعليمات لتشمل التعديل الفعلي وهيكلة الملفات
+          # نطلب من الذكاء الاصطناعي إنتاج سكربت Shell لتنفيذ التغييرات
           prompt: |
-            أنت مهندس برمجيات خبير ومسؤول عن مشروع "RockDeals-POS-System".
-            مهمتك ليست التعليق فقط، بل إجراء تعديلات مباشرة:
-            1. ابحث عن أي أخطاء برمجية في ملفات الـ Python/JavaScript/HTML وقم بإصلاحها.
-            2. قم بتحسين بنية المجلدات (Folder Structure) لتتبع أفضل ممارسات مشاريع الـ POS.
-            3. قم بتحديث ملف README.md ليعكس أي تغييرات في الهيكلية.
-            4. إذا وجدت ملفات ناقصة (مثل .gitignore أو requirements.txt)، قم بإنشائها بمحتوى صحيح.
-            قم بإخراج الكود المصلح بتنسيق واضح ليتم تطبيقه.
+            أنت مهندس برمجيات خبير ومدير تقني لمشروع "RockDeals-POS-System".
+            بناءً على ملف "architecture_rules.md" والمحتوى الحالي للمستودع:
+            1. ابحث عن الأخطاء البرمجية (Logic errors, Syntax) وأصلحها.
+            2. أعد تنظيم الملفات لتناسب هيكلية مشروع POS احترافي.
+            3. قم بتحديث التوثيق (README.md).
+            مهم جداً: قم بإخراج الإجابة كـ Shell Script كامل (bash) يقوم بعمليات (mkdir, mv, echo, cat) لتعديل الملفات.
+            اجعل الكود داخل علامات ```bash ... ``` فقط.
 
-      - name: Apply AI Changes
+      - name: Extract and Execute AI Script
         run: |
-          # هنا نقوم بتحويل اقتراحات الذكاء الاصطناعي إلى تغييرات فعلية في الملفات
-          git config --global user.name "RockDeals-AI-Bot"
-          git config --global user.email "ai-bot@rockdeals.local"
-          
-          # استدعاء سكربت داخلي لتنفيذ التعديلات (أو كتابتها مباشرة)
-          # ملاحظة: يمكنك إضافة خطوات هنا لتحويل مخرجات Gemini إلى ملفات حقيقية
-          
-      - name: Auto Commit & Push
+          # استخراج السكربت من مخرجات Gemini وتشغيله
+          # نفترض أن المخرج تم حفظه في متغير الخطوة السابقة
+          echo "${{ steps.gemini.outputs.response }}" | grep -Pzo '(?<=```bash\n)[\s\S]*?(?=\n```)' > apply_changes.sh
+          if [ -s apply_changes.sh ]; then
+            chmod +x apply_changes.sh
+            ./apply_changes.sh
+            rm apply_changes.sh
+          else
+            echo "No changes suggested by AI."
+          fi
+
+      - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "AI: Automated fixes and repository restructuring"
+          commit_message: "AI Autonomous: Bug fixes and structural improvements"
           branch: ${{ github.head_ref || github.ref_name }}
+          file_pattern: '*'
