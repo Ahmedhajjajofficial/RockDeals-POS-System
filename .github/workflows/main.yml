@@ -25,6 +25,6 @@ jobs:
         id: gemini
         uses: google-github-actions/run-gemini-cli@v0
         with:
-          gemini_api_key: AIzaSyDVtnggUSXwXtp6uKq7ou9V7RQOjV6V6pg
+          google_api_key: AIzaSyDVtnggUSXwXtp6uKq7ou9V7RQOjV6V6pg
           prompt: |
             Analyze the repository, fix any bugs, and optimize the POS system structure.
