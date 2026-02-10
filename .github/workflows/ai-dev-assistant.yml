@@ -1,0 +1,153 @@
+name: AI Dev Assistant (Safe & Deterministic)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: "Task type for the AI assistant"
+        required: true
+        default: Refactor
+        type: choice
+        options:
+          - Refactor
+          - BugFix
+          - NewFeature
+          - SecurityAudit
+          - Documentation
+
+      custom_prompt:
+        description: "Additional human instructions"
+        required: false
+        default: ""
+
+      auto_commit:
+        description: "Allow the workflow to commit changes"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ai-dev:
+    runs-on: ubuntu-latest
+
+    env:
+      TASK_TYPE: ${{ github.event.inputs.task_type }}
+      CUSTOM_PROMPT: ${{ github.event.inputs.custom_prompt }}
+      AUTO_COMMIT: ${{ github.event.inputs.auto_commit }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ---------- SAFETY GUARD ----------
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "❌ GEMINI_API_KEY is missing."
+            echo "➡️  Add it in: Settings → Secrets → Actions"
+            exit 1
+          fi
+
+      - name: Setup runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nodejs npm python3-pip
+          pip install black flake8 bandit pytest
+
+      # ---------- GEMINI (NO ACTION, PURE CLI) ----------
+      - name: Run Gemini AI (analysis only)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+
+          npm install -g @google/gemini-cli
+          gemini --version
+
+          echo "===== GEMINI ANALYSIS START ====="
+
+          gemini <<'EOF'
+          You are a senior software engineer and code reviewer.
+
+          Repository context:
+          - Project: RockDeals POS System
+
+          Task type:
+          - ${TASK_TYPE}
+
+          Human instructions:
+          - ${CUSTOM_PROMPT}
+
+          Your job:
+          1. Analyze the repository.
+          2. Suggest concrete improvements.
+          3. If relevant, describe exact file changes.
+          4. DO NOT assume permission to modify code.
+          5. Output recommendations clearly.
+
+          EOF
+
+          echo "===== GEMINI ANALYSIS END ====="
+
+      # ---------- OPTIONAL QUALITY GATES ----------
+      - name: Format code (Black)
+        run: black . || true
+
+      - name: Lint code (Flake8)
+        run: flake8 . || true
+
+      - name: Security scan (Bandit)
+        if: env.TASK_TYPE == 'SecurityAudit'
+        run: bandit -r . || true
+
+      - name: Run tests
+        run: pytest || true
+
+      # ---------- SAFE COMMIT LOGIC ----------
+      - name: Commit changes (only if enabled)
+        if: env.AUTO_COMMIT == 'true'
+        run: |
+          git config user.name "ai-dev-assistant"
+          git config user.email "ai@assistant.local"
+
+          BRANCH="ai/${TASK_TYPE,,}-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+
+          if git diff --quiet; then
+            echo "ℹ️ No changes to commit."
+            exit 0
+          fi
+
+          git add .
+          git commit -m "AI (${TASK_TYPE}): automated improvements"
+          git push origin "$BRANCH"
+
+      - name: Create Pull Request
+        if: env.AUTO_COMMIT == 'false'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ai/${{ env.TASK_TYPE }}-${{ github.run_id }}
+          title: "AI Review: ${{ env.TASK_TYPE }}"
+          commit-message: "AI analysis and formatting"
+          body: |
+            ## 🤖 AI Dev Assistant Report
+
+            **Task Type:** ${{ env.TASK_TYPE }}
+
+            **Instructions:**
+            ${{ env.CUSTOM_PROMPT }}
+
+            ---
+            This workflow is intentionally conservative.
+            No destructive actions were taken automatically.
